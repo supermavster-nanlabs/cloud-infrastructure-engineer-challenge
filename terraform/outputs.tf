@@ -1,3 +1,8 @@
+output "info_url" {
+  description = "URL of GET /info."
+  value       = module.api.route_url
+}
+
 output "vpc_id" {
   description = "ID of the VPC."
   value       = module.network.vpc_id

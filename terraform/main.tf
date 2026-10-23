@@ -41,3 +41,14 @@ module "lambda" {
     DB_BACKUP_DAYS    = tostring(module.database.details.backup_retention_days)
   }
 }
+
+module "api" {
+  source = "./modules/api"
+
+  name                   = "${var.name}-info"
+  lambda_function_name   = module.lambda.function_name
+  lambda_invoke_arn      = module.lambda.invoke_arn
+  integration_timeout_ms = (var.lambda_timeout_seconds + 1) * 1000
+  throttling_rate_limit  = var.api_throttling_rate_limit
+  throttling_burst_limit = var.api_throttling_burst_limit
+}

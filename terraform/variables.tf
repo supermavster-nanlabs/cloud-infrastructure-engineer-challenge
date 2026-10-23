@@ -74,3 +74,15 @@ variable "lambda_timeout_seconds" {
   type        = number
   default     = 15
 }
+
+variable "api_throttling_rate_limit" {
+  description = "Requests per second the API accepts. Excess requests get HTTP 429 before they reach the database."
+  type        = number
+  default     = 5
+}
+
+variable "api_throttling_burst_limit" {
+  description = "Short burst of requests the API accepts above the steady rate."
+  type        = number
+  default     = 10
+}
