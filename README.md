@@ -71,6 +71,10 @@ flowchart LR
 
 ## Deploy
 
+First time, or handing this to someone else? [docs/runbook.md](docs/runbook.md) goes
+from getting AWS credentials to a working endpoint and back to an empty account,
+with both `make` and the GitHub workflow. What follows is the short version.
+
 You need an AWS account and credentials in your environment. Terraform 1.11 or
 newer (developed on 1.15.9) and [uv](https://docs.astral.sh/uv/) (it fetches
 Python 3.13 for the build) are required; the AWS CLI is needed for the state
@@ -208,6 +212,6 @@ terraform/
   tests/          applies the whole stack against a mocked provider
 function/    the Lambda: handler, tests, sample event, local invoker
 local/       Docker Compose for a local PostgreSQL
-docs/        decisions, deploying from GitHub, and the original challenge statement
+docs/        runbook, decisions, deploying from GitHub, and the challenge statement
 Makefile     the entry point for every task
 ```

@@ -28,65 +28,9 @@ that is changing infrastructure is never cancelled.
 
 ## One-time setup
 
-**1. The state bucket** (once per AWS account; the name must be globally unique):
-
-```bash
-STATE_BUCKET=<globally-unique-name> make state-bucket
-gh variable set STATE_BUCKET --body <globally-unique-name>
-```
-
-If the bucket is not in `us-east-1`, also set the `STATE_REGION` variable to its
-region.
-
-**2. GitHub environments.** Create `dev` and `prod` under Settings >
-Environments. For `prod`, add yourself as a required reviewer: every run against
-prod then waits for approval before it starts.
-
-**3. AWS access.** Choose one. The workflow uses the role if the `AWS_ROLE_ARN`
-variable is set, and the keys otherwise.
-
-*Option A: OIDC role (recommended, no stored keys).* Create the GitHub identity
-provider once per account, then a role the workflow can assume:
-
-```bash
-aws iam create-open-id-connect-provider --url https://token.actions.githubusercontent.com \
-  --client-id-list sts.amazonaws.com
-```
-
-The role's trust policy lets only this repository's environments assume it:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": { "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com" },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
-      "StringLike": { "token.actions.githubusercontent.com:sub": "repo:<OWNER>/<REPO>:environment:*" }
-    }
-  }]
-}
-```
-
-```bash
-gh variable set AWS_ROLE_ARN --env dev  --body arn:aws:iam::<ACCOUNT_ID>:role/<ROLE>
-gh variable set AWS_ROLE_ARN --env prod --body arn:aws:iam::<ACCOUNT_ID>:role/<ROLE>
-```
-
-*Option B: access keys.* Create an IAM user for this, and store its keys as
-secrets of each environment (the value is read from standard input, so it does not
-end up in your shell history):
-
-```bash
-gh secret set AWS_ACCESS_KEY_ID     --env dev
-gh secret set AWS_SECRET_ACCESS_KEY --env dev
-```
-
-Keys are long-lived credentials; prefer the role, and rotate keys if you use them.
-Environment secrets and variables can differ between `dev` and `prod`, so the two
-can point at different AWS accounts.
+The state bucket, the `dev` and `prod` GitHub environments, and the AWS credentials
+(an OIDC role or access keys) are set up once. The commands are in
+[runbook.md](runbook.md), parts 2, 3 and 5.
 
 ## Permissions
 
