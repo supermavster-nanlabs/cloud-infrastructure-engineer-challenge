@@ -6,7 +6,7 @@ TF := terraform -chdir=terraform
 CHECKOV_VERSION := 3.3.30
 MODULES := $(wildcard terraform/modules/*)
 
-.PHONY: help fmt validate lint scan test function-check integration local-up local-down local-invoke build check
+.PHONY: help fmt validate lint scan test function-check integration local-up local-down local-invoke build plan apply destroy verify logs check
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -61,6 +61,25 @@ build: ## Package the function into build/function (locked, hash-verified, linux
 	cp function/handler.py build/function/
 	cp -R function/certs build/function/
 	find build/function -name __pycache__ -type d -prune -exec rm -rf {} +
+
+plan: build ## Plan and save the plan to review (needs AWS credentials)
+	$(TF) init -input=false
+	$(TF) plan -input=false -out=main.tfplan
+
+apply: ## Apply the plan saved by make plan, and nothing else
+	@test -f terraform/main.tfplan || { echo "no saved plan: run make plan and review it first"; exit 1; }
+	$(TF) apply -input=false main.tfplan
+
+destroy: ## Destroy everything. Needs CONFIRM=yes, and Terraform still asks
+	@test "$(CONFIRM)" = yes || { echo "refusing to destroy: run make destroy CONFIRM=yes"; exit 1; }
+	@$(MAKE) --no-print-directory build
+	$(TF) destroy
+
+verify: ## Call the deployed endpoint and print the response
+	curl -sS --fail-with-body "$$($(TF) output -raw info_url)" | jq .
+
+logs: ## Tail the Lambda's CloudWatch logs (needs the AWS CLI)
+	aws logs tail "$$($(TF) output -raw lambda_log_group_name)" --since 15m --follow
 
 check: ## Everything that needs no AWS account
 	terraform fmt -check -recursive terraform
