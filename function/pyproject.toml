@@ -1,0 +1,36 @@
+[project]
+name = "info-api"
+version = "0.1.0"
+description = "Lambda behind GET /info: reports PostgreSQL connection status and instance details."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "pg8000==1.31.5",
+]
+
+[dependency-groups]
+dev = [
+  "boto3>=1.35",
+  "pytest>=8.3",
+  "ruff>=0.17",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+markers = [
+  "integration: needs a reachable PostgreSQL, configured through the DB_* environment variables",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "S", "PT"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S107"]
