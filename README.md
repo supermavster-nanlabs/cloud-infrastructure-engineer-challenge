@@ -114,6 +114,11 @@ with `TF_VAR_alert_email=you@example.com make plan`.
 If a run is interrupted and the state stays locked, Terraform prints a lock ID:
 `make unlock ENV=dev REGION=us-east-1 CONFIRM=dev LOCK_ID=<id>`.
 
+**Prefer the GitHub UI to `make`?** The `deploy` workflow does plan, apply, destroy
+and unlock from the Actions tab, choosing the environment and region, with the
+credentials kept as GitHub secrets. It calls the same targets, so it works on the
+same state. Setup is in [docs/github-actions.md](docs/github-actions.md).
+
 A successful `make verify` prints (abridged):
 
 ```json
@@ -203,6 +208,6 @@ terraform/
   tests/          applies the whole stack against a mocked provider
 function/    the Lambda: handler, tests, sample event, local invoker
 local/       Docker Compose for a local PostgreSQL
-docs/        decisions, and the original challenge statement
+docs/        decisions, deploying from GitHub, and the original challenge statement
 Makefile     the entry point for every task
 ```

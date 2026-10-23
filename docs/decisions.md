@@ -19,6 +19,14 @@ infrastructure; GitHub runners are ephemeral, so local state would be lost after
 every run. The bucket is created once with `make state-bucket`, and each
 environment and region has its own state key.
 
+**Two ways to deploy, one set of commands.** `make` for people who have the tools,
+and a `workflow_dispatch` workflow for people who would rather click. The workflow
+only calls the make targets, so there is one implementation to review and both
+paths always act on the same state. It uses OIDC when a role is configured and
+access keys otherwise, and prod waits for a reviewer. `apply` plans and applies in
+the same run instead of passing a plan between jobs, which keeps the workflow
+simple; run `plan` first to read it before applying.
+
 **RDS PostgreSQL, not a database on EC2.** AWS handles backups, point-in-time
 restore, Multi-AZ failover, patching and encryption. EC2 would mean owning all of
 that, plus SSH access and operating-system patching, for no benefit.
