@@ -86,3 +86,9 @@ variable "api_throttling_burst_limit" {
   type        = number
   default     = 10
 }
+
+variable "alert_email" {
+  description = "Address that receives alarm emails. AWS sends a link that must be clicked to confirm. Null creates the topic with no subscriber."
+  type        = string
+  default     = null
+}

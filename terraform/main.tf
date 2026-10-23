@@ -52,3 +52,13 @@ module "api" {
   throttling_rate_limit  = var.api_throttling_rate_limit
   throttling_burst_limit = var.api_throttling_burst_limit
 }
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  name                   = var.name
+  alert_email            = var.alert_email
+  db_instance_identifier = module.database.identifier
+  lambda_function_name   = module.lambda.function_name
+  api_id                 = module.api.api_id
+}

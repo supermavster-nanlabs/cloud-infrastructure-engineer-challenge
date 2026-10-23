@@ -1,3 +1,8 @@
+output "identifier" {
+  description = "DB instance identifier, as used by the RDS and CloudWatch APIs."
+  value       = aws_db_instance.this.identifier
+}
+
 output "address" {
   description = "DNS name of the database endpoint. It keeps pointing at the primary after a failover."
   value       = aws_db_instance.this.address
