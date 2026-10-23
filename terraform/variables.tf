@@ -62,3 +62,15 @@ variable "db_skip_final_snapshot" {
   type        = bool
   default     = true
 }
+
+variable "lambda_package_dir" {
+  description = "Directory holding the built Lambda package. Created by make build."
+  type        = string
+  default     = "../build/function"
+}
+
+variable "lambda_timeout_seconds" {
+  description = "Lambda timeout. API Gateway waits one second longer, so callers see the function's own error rather than a gateway timeout."
+  type        = number
+  default     = 15
+}

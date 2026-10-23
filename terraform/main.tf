@@ -19,3 +19,25 @@ module "database" {
   deletion_protection   = var.db_deletion_protection
   skip_final_snapshot   = var.db_skip_final_snapshot
 }
+
+module "lambda" {
+  source = "./modules/lambda"
+
+  name              = "${var.name}-info"
+  source_dir        = var.lambda_package_dir
+  timeout           = var.lambda_timeout_seconds
+  subnet_ids        = module.network.app_subnet_ids
+  security_group_id = module.network.lambda_security_group_id
+  secret_arn        = module.database.master_secret_arn
+
+  environment = {
+    DB_HOST           = module.database.address
+    DB_PORT           = tostring(module.database.port)
+    DB_NAME           = module.database.database_name
+    DB_SECRET_ARN     = module.database.master_secret_arn
+    DB_INSTANCE_CLASS = module.database.details.class
+    DB_MULTI_AZ       = tostring(module.database.details.multi_az)
+    DB_AZ             = module.database.details.availability_zone
+    DB_BACKUP_DAYS    = tostring(module.database.details.backup_retention_days)
+  }
+}
