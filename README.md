@@ -71,37 +71,53 @@ flowchart LR
 
 ## Deploy
 
-You need an AWS account and credentials in your environment. Terraform 1.9 or newer
-(developed on 1.15.9) and [uv](https://docs.astral.sh/uv/) (it fetches Python 3.13
-for the build) are required; the AWS CLI is only needed for `make logs`.
+You need an AWS account and credentials in your environment. Terraform 1.11 or
+newer (developed on 1.15.9) and [uv](https://docs.astral.sh/uv/) (it fetches
+Python 3.13 for the build) are required; the AWS CLI is needed for the state
+bucket and `make logs`.
+
+The state lives in an S3 bucket, shared by `make` and by the GitHub workflow
+(see below), so both always see the same infrastructure. Create it once per
+account (the name must be globally unique):
 
 ```bash
-make plan      # builds the Lambda package and saves the plan to review
-make apply     # applies exactly that plan
-make verify    # calls the endpoint and prints the JSON
-make logs      # tails the Lambda's CloudWatch logs
-make destroy CONFIRM=yes   # tear it down: the NAT gateway and database bill by the hour
+export STATE_BUCKET=<globally-unique-name>
+make state-bucket              # versioned, encrypted, no public access
 ```
 
-Defaults work as they are. To change a setting, use a `TF_VAR_` variable, for
-example `TF_VAR_alert_email=you@example.com TF_VAR_db_multi_az=true make plan`
-(all variables are in `terraform/variables.tf`). `terraform.tfvars` is gitignored.
+Then, for the environment (`dev` or `prod`) and region you want:
 
-Deletion protection is off and the final snapshot is skipped by default, so a test
-deployment can be destroyed in one step. For anything that matters, set
-`db_deletion_protection = true` and `db_skip_final_snapshot = false`.
-
-State is local. To keep it in S3 instead (Terraform 1.11 or newer), add this to
-`terraform/versions.tf` and run `terraform init -migrate-state`:
-
-```hcl
-backend "s3" {
-  bucket       = "<your-state-bucket>"
-  key          = "info-api/terraform.tfstate"
-  region       = "us-east-1"
-  use_lockfile = true
-}
+```bash
+make plan ENV=dev REGION=us-east-1      # builds the package, saves the plan to review
+make apply ENV=dev REGION=us-east-1     # applies exactly that plan
+make verify ENV=dev REGION=us-east-1    # calls the endpoint and prints the JSON
+make logs ENV=dev REGION=us-east-1      # tails the Lambda's CloudWatch logs
+make destroy ENV=dev REGION=us-east-1 CONFIRM=dev   # the NAT gateway and database bill by the hour
 ```
+
+`ENV` and `REGION` default to `dev` and `us-east-1`. Each pair has its own state
+(`info-api/<env>/<region>/terraform.tfstate`). Settings per environment are in
+`terraform/environments/`:
+
+| Setting | dev | prod |
+| ------- | --- | ---- |
+| NAT gateways | one shared | one per zone |
+| Database standby (Multi-AZ) | no | yes |
+| Backups | 7 days | 14 days |
+| Deletion protection, final snapshot | off, so it is easy to destroy | on |
+
+Prod's deletion protection means `destroy` fails until
+`db_deletion_protection = false` is applied first. That friction is intended.
+Other variables (such as `alert_email`) are in `terraform/variables.tf`; set them
+with `TF_VAR_alert_email=you@example.com make plan`.
+
+If a run is interrupted and the state stays locked, Terraform prints a lock ID:
+`make unlock ENV=dev REGION=us-east-1 CONFIRM=dev LOCK_ID=<id>`.
+
+**Prefer the GitHub UI to `make`?** The `deploy` workflow does plan, apply, destroy
+and unlock from the Actions tab, choosing the environment and region, with the
+credentials kept as GitHub secrets. It calls the same targets, so it works on the
+same state. Setup is in [docs/github-actions.md](docs/github-actions.md).
 
 A successful `make verify` prints (abridged):
 
@@ -187,10 +203,11 @@ public endpoint and the response is not sensitive.
 
 ```text
 terraform/
-  modules/   network, database, lambda, api, monitoring (each with tests)
-  tests/     applies the whole stack against a mocked provider
+  modules/        network, database, lambda, api, monitoring (each with tests)
+  environments/   dev.tfvars and prod.tfvars
+  tests/          applies the whole stack against a mocked provider
 function/    the Lambda: handler, tests, sample event, local invoker
 local/       Docker Compose for a local PostgreSQL
-docs/        decisions, and the original challenge statement
+docs/        decisions, deploying from GitHub, and the original challenge statement
 Makefile     the entry point for every task
 ```

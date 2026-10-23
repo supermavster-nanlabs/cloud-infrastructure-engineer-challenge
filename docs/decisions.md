@@ -12,10 +12,20 @@ without an account. CloudFormation, SAM and CDK tie the work to AWS and make the
 change harder to review. OpenTofu would probably work unchanged but was not
 tested.
 
-**One root, five modules, local state.** `terraform init && terraform apply` works
-with defaults and no settings file, which is what a reviewer wants. Each module
-has one job (network, database, lambda, api, monitoring) and its own tests.
-State is local; the README shows the three lines that move it to S3.
+**One root, five modules, shared S3 state.** Each module has one job (network,
+database, lambda, api, monitoring) and its own tests. The state sits in S3 with
+the native lock file, so `make` and the GitHub workflow work on the same
+infrastructure; GitHub runners are ephemeral, so local state would be lost after
+every run. The bucket is created once with `make state-bucket`, and each
+environment and region has its own state key.
+
+**Two ways to deploy, one set of commands.** `make` for people who have the tools,
+and a `workflow_dispatch` workflow for people who would rather click. The workflow
+only calls the make targets, so there is one implementation to review and both
+paths always act on the same state. It uses OIDC when a role is configured and
+access keys otherwise, and prod waits for a reviewer. `apply` plans and applies in
+the same run instead of passing a plan between jobs, which keeps the workflow
+simple; run `plan` first to read it before applying.
 
 **RDS PostgreSQL, not a database on EC2.** AWS handles backups, point-in-time
 restore, Multi-AZ failover, patching and encryption. EC2 would mean owning all of
@@ -65,8 +75,8 @@ read. None is needed to meet the brief.
 | -------- | ------------------------------ |
 | Customer-managed KMS keys | Keys per purpose (data, logs) with rotation. Storage and the secret are already encrypted with AWS-managed keys |
 | VPC flow logs | Enable them to a log group with retention |
-| Remote state and locking | S3 backend with `use_lockfile`, from a small bootstrap step that creates a locked-down bucket |
-| Separate dev and prod profiles | A settings file per environment, with a NAT gateway per zone, Multi-AZ, longer backups and deletion protection in prod |
+| A managed state bucket | Create the bucket with Terraform in its own small root (versioning, KMS, a TLS-only policy, `prevent_destroy`) instead of the four CLI commands in `make state-bucket` |
+| More environments | Staging, and separate AWS accounts per environment instead of one account with a name suffix |
 | Database logs and enhanced monitoring | Export the PostgreSQL log to a log group with retention and a KMS key |
 | More alarms | Storage, memory, connections, Lambda throttles and duration, NAT port exhaustion |
 | Lambda concurrency cap | Cap it, so a slow database cannot be flooded with connections (needs spare account quota). The API throttle already limits the rate |
