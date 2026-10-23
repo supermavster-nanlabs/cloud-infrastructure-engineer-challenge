@@ -32,6 +32,9 @@ test: ## Run the Terraform tests (mocked AWS provider, no credentials needed)
 		terraform -chdir=$$dir init -backend=false -input=false >/dev/null; \
 		terraform -chdir=$$dir test; \
 	done
+	@echo "test terraform (whole stack)"
+	@$(TF) init -backend=false -input=false >/dev/null
+	@$(TF) test
 
 function-check: ## Lint the Lambda function and run its unit tests
 	cd function && uv run ruff check . && uv run ruff format --check . && uv run pytest -m "not integration"

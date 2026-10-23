@@ -62,3 +62,33 @@ variable "db_skip_final_snapshot" {
   type        = bool
   default     = true
 }
+
+variable "lambda_package_dir" {
+  description = "Directory holding the built Lambda package. Created by make build."
+  type        = string
+  default     = "../build/function"
+}
+
+variable "lambda_timeout_seconds" {
+  description = "Lambda timeout. API Gateway waits one second longer, so callers see the function's own error rather than a gateway timeout."
+  type        = number
+  default     = 15
+}
+
+variable "api_throttling_rate_limit" {
+  description = "Requests per second the API accepts. Excess requests get HTTP 429 before they reach the database."
+  type        = number
+  default     = 5
+}
+
+variable "api_throttling_burst_limit" {
+  description = "Short burst of requests the API accepts above the steady rate."
+  type        = number
+  default     = 10
+}
+
+variable "alert_email" {
+  description = "Address that receives alarm emails. AWS sends a link that must be clicked to confirm. Null creates the topic with no subscriber."
+  type        = string
+  default     = null
+}
