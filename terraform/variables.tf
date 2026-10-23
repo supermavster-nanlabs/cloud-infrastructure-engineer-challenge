@@ -32,3 +32,33 @@ variable "nat_gateway_per_az" {
   type        = bool
   default     = false
 }
+
+variable "db_instance_class" {
+  description = "RDS instance class."
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "db_multi_az" {
+  description = "Run a synchronous standby in a second zone with automatic failover. Off by default to keep a test deployment cheap."
+  type        = bool
+  default     = false
+}
+
+variable "db_backup_retention_days" {
+  description = "Days to keep automated database backups (1-35). Sets the point-in-time restore window."
+  type        = number
+  default     = 7
+}
+
+variable "db_deletion_protection" {
+  description = "Refuse to delete the database while true. Off by default so a test deployment can be destroyed; turn it on in production."
+  type        = bool
+  default     = false
+}
+
+variable "db_skip_final_snapshot" {
+  description = "Skip the snapshot taken when the database is deleted. Set to false in production."
+  type        = bool
+  default     = true
+}
