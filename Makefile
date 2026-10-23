@@ -6,7 +6,7 @@ TF := terraform -chdir=terraform
 CHECKOV_VERSION := 3.3.30
 MODULES := $(wildcard terraform/modules/*)
 
-.PHONY: help fmt validate lint scan test check
+.PHONY: help fmt validate lint scan test function-check integration build check
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -33,6 +33,21 @@ test: ## Run the Terraform tests (mocked AWS provider, no credentials needed)
 		terraform -chdir=$$dir test; \
 	done
 
+function-check: ## Lint the Lambda function and run its unit tests
+	cd function && uv run ruff check . && uv run ruff format --check . && uv run pytest -m "not integration"
+
+integration: ## Run the integration tests against the PostgreSQL in the DB_* variables
+	cd function && uv run pytest -m integration
+
+build: ## Package the function into build/function (locked, hash-verified, linux arm64)
+	rm -rf build
+	mkdir -p build/function
+	cd function && uv export --frozen --no-dev --no-emit-project -o $(CURDIR)/build/requirements.txt
+	uv pip install --quiet --target build/function --python-platform aarch64-manylinux2014 --python-version 3.13 --require-hashes --no-deps -r build/requirements.txt
+	cp function/handler.py build/function/
+	cp -R function/certs build/function/
+	find build/function -name __pycache__ -type d -prune -exec rm -rf {} +
+
 check: ## Everything that needs no AWS account
 	terraform fmt -check -recursive terraform
-	$(MAKE) validate lint scan test
+	$(MAKE) validate lint scan test function-check
