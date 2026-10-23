@@ -1,0 +1,15 @@
+framework:
+  - terraform
+  - dockerfile
+  - github_actions
+directory:
+  - .
+compact: true
+quiet: true
+download-external-modules: false
+
+# Log groups keep the default CloudWatch encryption and a short retention: a
+# customer-managed key and a year of logs are not worth it for this workload.
+skip-check:
+  - CKV_AWS_158
+  - CKV_AWS_338
