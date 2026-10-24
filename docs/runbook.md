@@ -105,6 +105,12 @@ part 5.2 first.
 export GH_REPO=<OWNER>/<REPO>
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
+# GitHub's subject prefix for this repository. Repositories created after
+# 15 July 2026 use immutable IDs in it (repo:OWNER@ID/REPO@ID), so do not type it.
+SUB_PREFIX=$(gh api "repos/${GH_REPO}/actions/oidc/customization/sub" --jq '.sub_claim_prefix // empty')
+SUB_PREFIX=${SUB_PREFIX:-repo:${GH_REPO}}
+echo "$SUB_PREFIX"
+
 # Once per account. "EntityAlreadyExists" means it is already there: carry on.
 aws iam create-open-id-connect-provider \
   --url https://token.actions.githubusercontent.com \
@@ -121,7 +127,7 @@ cat > "$TRUST" <<EOF
     "Action": "sts:AssumeRoleWithWebIdentity",
     "Condition": {
       "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
-      "StringLike": { "token.actions.githubusercontent.com:sub": "repo:${GH_REPO}:environment:*" }
+      "StringLike": { "token.actions.githubusercontent.com:sub": "${SUB_PREFIX}:environment:*" }
     }
   }]
 }
@@ -338,7 +344,7 @@ the GitHub secrets and variables (Settings, or `gh secret delete` and
 | ------------ | ------------ | ---------- |
 | `Set the STATE_BUCKET secret` (workflow) | Part 5.3 not done | Set the repository secret |
 | `Set the AWS_ROLE_ARN secret ... or the AWS_ACCESS_KEY_ID ...` | Part 5.4 not done, or set on the wrong environment | Store the credentials in the environment you chose when running |
-| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | The trust policy does not match: repository name, owner case, or the run is not using an environment | Compare `repo:<OWNER>/<REPO>:environment:*` with your fork; confirm the job names an environment |
+| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | The trust policy's `sub` does not match what GitHub sends. Most often the repository uses immutable subjects (`repo:OWNER@ID/REPO@ID`), the default for repositories created after 15 July 2026, and the policy has the plain name. Or the job names no environment | Run `gh api repos/<OWNER>/<REPO>/actions/oidc/customization/sub --jq .sub_claim_prefix` and make the policy's `sub` that value plus `:environment:*` (`aws iam update-assume-role-policy`) |
 | `ExpiredToken`, or the SSO login expired (path A) | Short-lived credentials ran out | `aws sso login --profile info-api` |
 | `set STATE_BUCKET to your state bucket` (make) | `STATE_BUCKET` is not exported in this shell | `export STATE_BUCKET=...` |
 | `BucketAlreadyExists` | Bucket names are global | Choose another name |
