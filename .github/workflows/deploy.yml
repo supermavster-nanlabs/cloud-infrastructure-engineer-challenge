@@ -36,7 +36,7 @@ on:
 permissions:
   contents: read
 
-# Never cancel a run that is changing infrastructure; queue the next one instead.
+# Never cancel a run that is changing infrastructure; hold one pending run per environment and region.
 concurrency:
   group: deploy-${{ inputs.environment }}-${{ inputs.region }}
   cancel-in-progress: false

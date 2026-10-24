@@ -7,7 +7,7 @@ act on the same state:
 | Path | Use it when | Needs on your machine |
 | ---- | ----------- | --------------------- |
 | **A. `make`** | you are comfortable in a terminal | Terraform, uv, AWS CLI, jq |
-| **B. GitHub workflow** | you would rather click in the Actions tab | a GitHub account (the CLI helps, but is optional) |
+| **B. GitHub workflow** | you would rather click in the Actions tab | AWS CLI (`gh` optional) for the one-time setup; none to run the workflow |
 
 Parts 1, 3, 6 and 7 are shared. Part 2 gets credentials, 4 is path A, 5 is path B.
 Replace everything in `<angle brackets>` with your own value before you run a
@@ -36,8 +36,10 @@ jq --version
 gh --version          # only for the GitHub path, and optional
 ```
 
-Path B needs none of them except `gh` if you want to configure GitHub from the
-terminal; everything `gh` does here can also be done in the repository's Settings.
+Path B runs Terraform and `uv` inside GitHub Actions, so you only need the AWS CLI
+(or AWS CloudShell) for the one-time account setup in parts 2B and 3, plus `gh` if
+you want to configure GitHub from the terminal; everything `gh` does here can also
+be done in the repository's Settings.
 
 **1.3 Pick three values** and keep them handy:
 
@@ -107,8 +109,13 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 # GitHub's subject prefix for this repository. Repositories created after
 # 15 July 2026 use immutable IDs in it (repo:OWNER@ID/REPO@ID), so do not type it.
-SUB_PREFIX=$(gh api "repos/${GH_REPO}/actions/oidc/customization/sub" --jq '.sub_claim_prefix // empty')
-SUB_PREFIX=${SUB_PREFIX:-repo:${GH_REPO}}
+# Fall back to constructing the immutable prefix from the owner and repo IDs if the
+# OIDC customization endpoint is unavailable (pre-July 2026 repos that have not
+# opted in use repo:${GH_REPO} instead).
+SUB_PREFIX=$(gh api "repos/${GH_REPO}/actions/oidc/customization/sub" --jq '.sub_claim_prefix // empty' 2>/dev/null || true)
+if [ -z "$SUB_PREFIX" ]; then
+  SUB_PREFIX=$(gh api "repos/${GH_REPO}" --jq '"repo:\(.owner.login)@\(.owner.id)/\(.name)@\(.id)"')
+fi
 echo "$SUB_PREFIX"
 
 # Once per account. "EntityAlreadyExists" means it is already there: carry on.
@@ -233,9 +240,11 @@ printf '{"reviewers":[{"type":"User","id":%s}]}' "$(gh api user --jq .id)" \
 ```
 
 In the browser: Settings > Environments > New environment, and for `prod` tick
-Required reviewers and add yourself. Environment protection works on public
-repositories on every plan; on a private repository it needs GitHub Pro or Team
-(GitHub documents this, and says protection is ignored otherwise).
+Required reviewers and add yourself. Environments and environment secrets work on
+public repositories on every plan and on private repositories with GitHub Pro, Team
+or Enterprise; required reviewers on GitHub Free, Pro and Team are enforced only on
+public repositories (private repositories require GitHub Enterprise for required
+reviewers, so do not rely on that gate in a private non-Enterprise repository).
 
 **5.3 Store the state bucket.** The name is a secret, not a variable: bucket names
 often contain the account ID, and GitHub prints variables in the log of every step
@@ -243,7 +252,7 @@ while it masks secrets from the first one. The region is not sensitive.
 
 ```bash
 printf '%s' "$STATE_BUCKET" | gh secret set STATE_BUCKET
-gh variable set STATE_REGION --body us-east-1     # only if the bucket is elsewhere
+gh variable set STATE_REGION --body "${STATE_REGION:-us-east-1}"   # only if the bucket is outside us-east-1
 ```
 
 **5.4 Store the AWS credentials** with B1 or B2 from part 2B. Check:
