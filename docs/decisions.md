@@ -87,9 +87,13 @@ read. None is needed to meet the brief.
 | RDS Proxy | Connection pooling once there are many concurrent clients |
 | Dependency update automation | Dependabot for the pinned actions, providers and Python lockfile |
 
-## What only a deployment can show
+## What the deployment showed
 
-The live endpoint and the CloudWatch logs; that the invoke permission's source ARN
-matches the `$default` stage; that alarms can publish to the topic; and TLS
-verification against a real RDS certificate. The README says how to deploy and
-verify them.
+The first deployment ([evidence](evidence/dev-us-east-1.md)) showed the live endpoint
+answering `200`, the CloudWatch records for the request, that the invoke permission
+matches the `$default` stage (the route was reachable), and that the function
+verifies the TLS certificate against a real RDS instance (`tls: true`).
+
+It has not shown that the alarms can publish to the topic: they never fired.
+Neither were `prod`, the workflow's `apply` and `unlock`, or a failing database
+exercised. The README says how to deploy and verify.
