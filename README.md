@@ -34,7 +34,7 @@ flowchart LR
 | What | State |
 | ---- | ----- |
 | Terraform: format, validate, tflint, checkov | passes (`make check`) |
-| Terraform tests against a mocked AWS (no account needed) | 20 runs pass: 18 across the five modules and 2 that apply the whole stack |
+| Terraform tests against a mocked AWS (no account needed) | 21 runs pass: 19 across the five modules and 2 that apply the whole stack |
 | Function: lint, 11 unit tests, 3 integration tests against PostgreSQL 17 | passes |
 | The real handler against PostgreSQL 17 (`make local-up && make local-invoke`) | answers 200 with the database details |
 | GitHub Actions | runs the same `make` targets on every pull request |
