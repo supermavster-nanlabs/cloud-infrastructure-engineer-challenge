@@ -49,6 +49,9 @@ worth doing before pointing this at an account that matters.
 - **One region per environment per account.** IAM role names are global, so deploying
   the same environment to two regions of one account collides on the Lambda's role.
   Use a different account, or a different environment name, for the second region.
-- **The AWS account ID is masked** in the logs, because this repository is public.
+- **Account ID in the logs.** The role ARN and the state bucket name carry the account
+  ID, so both are secrets, which GitHub masks from the first step. The ID itself is
+  masked once credentials are configured. Variables are not masked and are printed in
+  each step's header, so do not keep anything sensitive in them.
 - Logs and run summaries of a public repository are public. The
   endpoint URL printed after an apply is a public endpoint anyway.

@@ -59,14 +59,16 @@ jobs:
       ACTION: ${{ inputs.action }}
       CONFIRM: ${{ inputs.confirm }}
       LOCK_ID: ${{ inputs.lock_id }}
-      STATE_BUCKET: ${{ vars.STATE_BUCKET }}
+      STATE_BUCKET: ${{ secrets.STATE_BUCKET }}
+      # Not named AWS_ROLE_ARN: the AWS SDK reads that name. A secret cannot be tested in an if, an env var can.
+      DEPLOY_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       STATE_REGION: ${{ vars.STATE_REGION || 'us-east-1' }}
     steps:
       - name: Check the inputs
         run: |
           set -euo pipefail
           if [ -z "${STATE_BUCKET}" ]; then
-            echo "::error::Set the STATE_BUCKET variable (Settings > Secrets and variables > Actions > Variables)."
+            echo "::error::Set the STATE_BUCKET secret (Settings > Secrets and variables > Actions > Secrets)."
             exit 1
           fi
           if [ "${ACTION}" = destroy ] || [ "${ACTION}" = unlock ]; then
@@ -82,11 +84,10 @@ jobs:
 
       - name: Check AWS access is configured
         env:
-          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
           AWS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         run: |
-          if [ -z "${AWS_ROLE_ARN}" ] && [ -z "${AWS_KEY_ID}" ]; then
-            echo "::error::Set the AWS_ROLE_ARN variable (OIDC) or the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets."
+          if [ -z "${DEPLOY_ROLE_ARN}" ] && [ -z "${AWS_KEY_ID}" ]; then
+            echo "::error::Set the AWS_ROLE_ARN secret (OIDC) or the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets."
             exit 1
           fi
 
@@ -95,14 +96,14 @@ jobs:
           persist-credentials: false
 
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
-        if: ${{ vars.AWS_ROLE_ARN != '' }}
+        if: ${{ env.DEPLOY_ROLE_ARN != '' }}
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ inputs.region }}
           mask-aws-account-id: true
 
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
-        if: ${{ vars.AWS_ROLE_ARN == '' }}
+        if: ${{ env.DEPLOY_ROLE_ARN == '' }}
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

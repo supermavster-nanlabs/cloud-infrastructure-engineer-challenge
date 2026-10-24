@@ -90,8 +90,10 @@ If the account ID is not the one you intend, stop and fix the profile.
 ### 2B. For the GitHub workflow (path B)
 
 The workflow needs its own AWS identity. Use the role (B1) when you can: it stores
-no secret. Use access keys (B2) if you cannot create an OIDC provider. The workflow
-uses the role if the `AWS_ROLE_ARN` variable exists, and the keys otherwise.
+no long-lived credential. Use access keys (B2) if you cannot create an OIDC provider.
+The workflow uses the role if the `AWS_ROLE_ARN` secret exists, and the keys
+otherwise. The role ARN is stored as a secret, not a variable, because it contains
+your account ID and GitHub prints variables in the log of every step.
 
 Run these with your administrator identity. Replace `<OWNER>/<REPO>` with your
 fork. The environments must exist before you store anything in them, so do
@@ -130,7 +132,7 @@ aws iam attach-role-policy --role-name info-api-deploy \
   --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
 
 for E in dev prod; do
-  gh variable set AWS_ROLE_ARN --env "$E" --body "arn:aws:iam::${ACCOUNT_ID}:role/info-api-deploy"
+  printf '%s' "arn:aws:iam::${ACCOUNT_ID}:role/info-api-deploy" | gh secret set AWS_ROLE_ARN --env "$E"
 done
 ```
 
@@ -229,19 +231,19 @@ Required reviewers and add yourself. Environment protection works on public
 repositories on every plan; on a private repository it needs GitHub Pro or Team
 (GitHub documents this, and says protection is ignored otherwise).
 
-**5.3 Store the state bucket.** A repository variable, not a secret (it is a name,
-not a credential):
+**5.3 Store the state bucket.** The name is a secret, not a variable: bucket names
+often contain the account ID, and GitHub prints variables in the log of every step
+while it masks secrets from the first one. The region is not sensitive.
 
 ```bash
-gh variable set STATE_BUCKET --body "$STATE_BUCKET"
+printf '%s' "$STATE_BUCKET" | gh secret set STATE_BUCKET
 gh variable set STATE_REGION --body us-east-1     # only if the bucket is elsewhere
 ```
 
 **5.4 Store the AWS credentials** with B1 or B2 from part 2B. Check:
 
 ```bash
-gh variable list --env dev       # AWS_ROLE_ARN (B1)
-gh secret list   --env dev       # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (B2)
+gh secret list --env dev         # AWS_ROLE_ARN (B1), or AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (B2)
 ```
 
 **5.5 Run it.** In your fork: **Actions > deploy > Run workflow**, then fill in:
@@ -327,15 +329,15 @@ aws iam delete-user --user-name info-api-deploy
 ```
 
 Delete the OIDC provider only if nothing else in the account uses it. Then remove
-the GitHub variables and secrets (Settings, or `gh variable delete` and
-`gh secret delete`).
+the GitHub secrets and variables (Settings, or `gh secret delete` and
+`gh variable delete`).
 
 ## 8. When something goes wrong
 
 | What you see | Likely cause | What to do |
 | ------------ | ------------ | ---------- |
-| `Set the STATE_BUCKET variable` (workflow) | Part 5.3 not done | Set the repository variable |
-| `Set the AWS_ROLE_ARN variable ... or the AWS_ACCESS_KEY_ID ...` | Part 5.4 not done, or set on the wrong environment | Store the credentials in the environment you chose when running |
+| `Set the STATE_BUCKET secret` (workflow) | Part 5.3 not done | Set the repository secret |
+| `Set the AWS_ROLE_ARN secret ... or the AWS_ACCESS_KEY_ID ...` | Part 5.4 not done, or set on the wrong environment | Store the credentials in the environment you chose when running |
 | `Not authorized to perform sts:AssumeRoleWithWebIdentity` | The trust policy does not match: repository name, owner case, or the run is not using an environment | Compare `repo:<OWNER>/<REPO>:environment:*` with your fork; confirm the job names an environment |
 | `ExpiredToken`, or the SSO login expired (path A) | Short-lived credentials ran out | `aws sso login --profile info-api` |
 | `set STATE_BUCKET to your state bucket` (make) | `STATE_BUCKET` is not exported in this shell | `export STATE_BUCKET=...` |
