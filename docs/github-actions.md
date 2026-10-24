@@ -23,8 +23,9 @@ Open **Actions > deploy > Run workflow** and choose:
 - **unlock** releases a stuck state lock. Terraform prints the lock ID when a
   run is interrupted ("state is locked"); paste it into `lock_id`.
 
-Runs for the same environment and region queue instead of overlapping, and a run
-that is changing infrastructure is never cancelled.
+A run that is changing infrastructure is never cancelled, and GitHub holds one
+pending run per environment and region (a newer pending run replaces an earlier
+pending one).
 
 ## One-time setup
 
