@@ -38,7 +38,7 @@ flowchart LR
 | Function: lint, 11 unit tests, 3 integration tests against PostgreSQL 17 | passes |
 | The real handler against PostgreSQL 17 (`make local-up && make local-invoke`) | answers 200 with the database details |
 | GitHub Actions | runs the same `make` targets on every pull request |
-| **Deployed to AWS: live endpoint and CloudWatch logs** | **not yet**; needs an AWS account. Steps below |
+| **Deployed to AWS** | applied, `GET /info` answered 200 with the database details, logs read, then destroyed from the workflow. Evidence: [docs/evidence/dev-us-east-1.md](docs/evidence/dev-us-east-1.md) |
 
 ## What it deploys
 
@@ -195,7 +195,10 @@ public endpoint and the response is not sensitive.
 
 ## Limits
 
-- **Not deployed here.** The live endpoint and logs need an AWS account.
+- **Not left running.** It was deployed, checked and destroyed (see the evidence above),
+  because the NAT gateway and the database bill by the hour. `make plan` and
+  `make apply` bring it back; the deploy steps are below. The workflow's `apply` and
+  `unlock`, the access-key option, `prod` and other regions were not exercised.
 - **A shared NAT gateway** is a single point of failure for the Lambda's outbound
   access; `nat_gateway_per_az = true` fixes it at the cost of a second gateway.
 - **No load balancer or CloudFront.** An HTTP API cannot use WAF, so that would mean
@@ -212,6 +215,6 @@ terraform/
   tests/          applies the whole stack against a mocked provider
 function/    the Lambda: handler, tests, sample event, local invoker
 local/       Docker Compose for a local PostgreSQL
-docs/        runbook, decisions, deploying from GitHub, and the challenge statement
+docs/        runbook, decisions, deploying from GitHub, evidence, the challenge statement
 Makefile     the entry point for every task
 ```
