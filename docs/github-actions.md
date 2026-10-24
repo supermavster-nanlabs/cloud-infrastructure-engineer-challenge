@@ -43,9 +43,10 @@ worth doing before pointing this at an account that matters.
 
 ## Things to know
 
-- **Not exercised yet.** The workflow is linted (actionlint) and passes checkov, but
-  it has not run against AWS. The first real run is the first test of the OIDC and
-  key paths, of the state bucket access and of `terraform force-unlock`.
+- **What has run.** Against a real account, the `plan` and `destroy` actions through
+  the OIDC role, sharing state with a `make apply`; see
+  [evidence/dev-us-east-1.md](evidence/dev-us-east-1.md). Not run: `apply` and
+  `unlock` from the workflow, the access-key path and `prod`.
 - **One region per environment per account.** IAM role names are global, so deploying
   the same environment to two regions of one account collides on the Lambda's role.
   Use a different account, or a different environment name, for the second region.

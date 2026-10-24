@@ -361,8 +361,16 @@ annotation at the top of the run page.
 
 ## What this runbook did not test
 
-It has not been run end to end against AWS. The `make` guards, the workflow syntax
-and the Terraform code are checked (`make check`, actionlint, checkov), but the
-credential commands, the OIDC trust policy and the first real deploy are written from
-the tools' own help and documentation. Whoever runs it first is its first test;
-fix this file where it is wrong.
+It was run against a real account once, and that run corrected it three times (the
+OIDC subject format, where the account ID shows in logs, and two details about the
+logs). What that run covered: the state bucket, an OIDC role and its trust policy,
+the GitHub environments and their secrets, a `make` plan, apply and verify, and the
+workflow's `plan` and `destroy` actions. The account was a personal one, reached
+through an SSO profile that already existed. The record is in
+[evidence/dev-us-east-1.md](evidence/dev-us-east-1.md).
+
+Not run: the access-key option (B2), `aws configure sso` and the other ways to create a
+profile, forking and enabling workflows (part 1.4), the workflow's `apply` and
+`unlock`, `prod`, regions other than `us-east-1`, and removing the state bucket (7.2)
+and the role and provider (7.3). Whoever runs those first is their first test; fix this file where
+it is wrong.
