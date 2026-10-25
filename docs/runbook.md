@@ -90,6 +90,19 @@ aws sts get-caller-identity
 
 If the account ID is not the one you intend, stop and fix the profile.
 
+**If `aws configure sso` shows no accounts, or `make state-bucket` fails with an explicit SCP deny:** accounts created through AWS builder portals (such as CodeCatalyst or AWS "Projects" sandboxes) often start with two restrictions that override even `AdministratorAccess`:
+
+1. **SSO lists no accounts (`Account instance` / AWS Builder ID):** the IAM Identity Center instance is bound to `AWS Builder ID` as an account-only instance, which cannot assign multi-account permissions.
+   - Sign in to the AWS console with the **Management Account** and open **IAM Identity Center > Settings**.
+   - Change **Identity source** from `AWS Builder ID` to **Identity Center directory** and enable **Multi-account permissions**.
+   - Under **AWS accounts**, select the sandbox member account and assign your user the `AdministratorAccess` permission set.
+2. **`AccessDenied ... with an explicit deny in a service control policy` on `s3:CreateBucket`:** auto-generated Organization SCPs attached to `Root` (such as `ManagedAccountSecurityControlPolicy` and `AdvancedModeRegionRestrictionSecurityControlPolicy`) explicitly deny creating S3 buckets or using certain regions in member accounts:
+   > `An error occurred (AccessDenied) when calling the CreateBucket operation: User: [...] is not authorized to perform: s3:CreateBucket on resource: [...] with an explicit deny in a service control policy: arn:aws:organizations::<MGMT_ACCOUNT_ID>:policy/<ORG_ID>/service_control_policy/<POLICY_ID>`
+   - Sign in to the **Management Account** (a member account cannot detach a Root SCP).
+   - Open **AWS Organizations > AWS accounts**, select **Root**, and open the **Policies > Service control policies** tab.
+   - Locate the restrictive auto-generated policies (`ManagedAccountSecurityControlPolicy`, `AdvancedModeRegionRestrictionSecurityControlPolicy`) and click **Detach**, leaving the default `FullAWSAccess` policy attached.
+   - Re-run `aws configure sso --profile info-api`, `export AWS_PROFILE=info-api`, and `make state-bucket`.
+
 ### 2B. For the GitHub workflow (path B)
 
 The workflow needs its own AWS identity. Use the role (B1) when you can: it stores
@@ -370,6 +383,8 @@ the GitHub secrets and variables (Settings, or `gh secret delete` and
 | `Set the AWS_ROLE_ARN secret ... or the AWS_ACCESS_KEY_ID ...` | Part 5.4 not done, or set on the wrong environment | Store the credentials in the environment you chose when running |
 | `Not authorized to perform sts:AssumeRoleWithWebIdentity` | The trust policy's `sub` does not match what GitHub sends. Most often the repository uses immutable subjects (`repo:OWNER@ID/REPO@ID`), the default for repositories created after 15 July 2026, and the policy has the plain name. Or the job names no environment | Run `gh api repos/<OWNER>/<REPO>/actions/oidc/customization/sub --jq .sub_claim_prefix` and make the policy's `sub` that value plus `:environment:*` (`aws iam update-assume-role-policy`) |
 | `ExpiredToken`, or the SSO login expired (path A) | Short-lived credentials ran out | `aws sso login --profile info-api` |
+| `aws configure sso` lists no AWS accounts | IAM Identity Center is set up as an `Account instance` bound to `AWS Builder ID` | In the Management Account, change **IAM Identity Center > Settings > Identity source** to `Identity Center directory`, enable multi-account permissions, and assign `AdministratorAccess` on the member account (see part 2A) |
+| `AccessDenied ... with an explicit deny in a service control policy` (for example on `s3:CreateBucket`) | Restrictive SCPs (`ManagedAccountSecurityControlPolicy` / `AdvancedModeRegionRestrictionSecurityControlPolicy`) attached to `Root` in AWS Organizations | In the Management Account, open **AWS Organizations > AWS accounts > Root > Policies > Service control policies** and **Detach** the restrictive SCPs, keeping `FullAWSAccess` (see part 2A) |
 | `set STATE_BUCKET to your state bucket` (make) | `STATE_BUCKET` is not exported in this shell | `export STATE_BUCKET=...` |
 | `BucketAlreadyExists` | Bucket names are global | Choose another name |
 | `no saved plan for dev in us-east-1` | `make apply` before `make plan` for that environment and region | `make plan` first |
@@ -385,16 +400,17 @@ annotation at the top of the run page.
 
 ## What this runbook did not test
 
-It was run against a real account once, and that run corrected it three times (the
-OIDC subject format, where the account ID shows in logs, and two details about the
-logs). What that run covered: the state bucket, an OIDC role and its trust policy,
-the GitHub environments and their secrets, a `make` plan, apply and verify, and the
-workflow's `plan` and `destroy` actions. The account was a personal one, reached
-through an SSO profile that already existed. The record is in
+It was run against a real account once, and that run corrected it on the SSO/SCP
+setup, the OIDC subject format, where the account ID shows in logs, and two details
+about the logs. What that run covered: `aws configure sso` (including switching IAM
+Identity Center from `AWS Builder ID` to `Identity Center directory` and detaching
+the auto-generated Root SCPs), `make state-bucket`, an OIDC role and its trust
+policy, the GitHub environments and their secrets, a `make` plan, apply and verify,
+and the workflow's `plan` and `destroy` actions. The record is in
 [evidence/dev-us-east-1.md](evidence/dev-us-east-1.md).
 
-Not run: the access-key option (B2), `aws configure sso` and the other ways to create a
-profile, forking and enabling workflows (part 1.4), the workflow's `apply` and
-`unlock`, `prod`, regions other than `us-east-1`, and removing the state bucket (7.2)
-and the role and provider (7.3). Whoever runs those first is their first test; fix this file where
+Not run: the access-key option (B2), `aws configure` with static keys, forking and
+enabling workflows (part 1.4), the workflow's `apply` and `unlock`, `prod`, regions
+other than `us-east-1`, and removing the state bucket (7.2) and the role and
+provider (7.3). Whoever runs those first is their first test; fix this file where
 it is wrong.
