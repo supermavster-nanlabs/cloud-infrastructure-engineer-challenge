@@ -6,8 +6,8 @@ act on the same state:
 
 | Path | Use it when | Needs on your machine |
 | ---- | ----------- | --------------------- |
-| **A. `make`** | you are comfortable in a terminal | Terraform, uv, AWS CLI, jq |
-| **B. GitHub workflow** | you would rather click in the Actions tab | AWS CLI (`gh` optional) for the one-time setup; none to run the workflow |
+| **A. `make`** | you are comfortable in a terminal | git, make, Terraform, uv, AWS CLI, jq |
+| **B. GitHub workflow** | you would rather click in the Actions tab | AWS CLI (`make`, `git`, `jq` and `gh` optional) for the one-time setup; none to run the workflow |
 
 Parts 1, 3, 6 and 7 are shared. Part 2 gets credentials, 4 is path A, 5 is path B.
 Replace everything in `<angle brackets>` with your own value before you run a
@@ -37,9 +37,10 @@ gh --version          # only for the GitHub path, and optional
 ```
 
 Path B runs Terraform and `uv` inside GitHub Actions, so you only need the AWS CLI
-(or AWS CloudShell) for the one-time account setup in parts 2B and 3, plus `gh` if
-you want to configure GitHub from the terminal; everything `gh` does here can also
-be done in the repository's Settings.
+(or AWS CloudShell) for the one-time account and state-bucket setup in parts 2B and
+3 (`make` and a repository checkout are optional because part 3 also gives the
+direct `aws s3api` commands), plus `gh` if you want to configure GitHub from the
+terminal; everything `gh` does here can also be done in the repository's Settings.
 
 **1.3 Pick three values** and keep them handy:
 
@@ -185,10 +186,24 @@ the identity in a different AWS account and store that account's values in the
 ## 3. Create the state bucket (once per account)
 
 The state lives in S3 so that `make` and the workflow see the same infrastructure.
+From a checkout of the repository:
 
 ```bash
 export STATE_BUCKET=<globally-unique-name>
 make state-bucket
+```
+
+Or directly with the AWS CLI (for example in AWS CloudShell, with no checkout or
+`make` needed; for a bucket outside `us-east-1`, append
+`--create-bucket-configuration LocationConstraint=$STATE_REGION` to `create-bucket`):
+
+```bash
+export STATE_BUCKET=<globally-unique-name>
+export STATE_REGION=us-east-1
+aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$STATE_REGION"
+aws s3api put-bucket-versioning --bucket "$STATE_BUCKET" --versioning-configuration Status=Enabled
+aws s3api put-public-access-block --bucket "$STATE_BUCKET" \
+  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
 ```
 
 It creates a bucket that is versioned, encrypted and closed to the public. If the
