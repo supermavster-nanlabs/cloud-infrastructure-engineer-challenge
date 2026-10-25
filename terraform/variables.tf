@@ -1,7 +1,7 @@
 variable "name" {
   description = "Name prefix for every resource."
   type        = string
-  default     = "info-api"
+  default     = "info-api-lean"
 
   validation {
     condition     = can(regex("^[a-z][a-z0-9-]{1,30}$", var.name))

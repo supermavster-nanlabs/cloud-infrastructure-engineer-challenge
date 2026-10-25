@@ -91,7 +91,7 @@ state-bucket: check-state ## Create the S3 bucket that holds the state (once per
 init: check-env check-state ## Connect to the shared state for ENV and REGION
 	$(TF) init -input=false -reconfigure \
 		-backend-config="bucket=$(STATE_BUCKET)" \
-		-backend-config="key=info-api/$(ENV)/$(REGION)/terraform.tfstate" \
+		-backend-config="key=info-api-lean/$(ENV)/$(REGION)/terraform.tfstate" \
 		-backend-config="region=$(STATE_REGION)" \
 		-backend-config="use_lockfile=true" \
 		-backend-config="encrypt=true"

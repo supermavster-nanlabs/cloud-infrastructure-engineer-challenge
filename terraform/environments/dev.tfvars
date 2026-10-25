@@ -1,4 +1,4 @@
-name = "info-api-dev"
+name = "info-api-lean-dev"
 
 # Cheap and disposable: one shared NAT gateway, no standby, nothing blocking teardown.
 nat_gateway_per_az       = false

@@ -23,7 +23,7 @@ mock_provider "aws" {
 
   mock_resource "aws_db_instance" {
     defaults = {
-      identifier        = "info-api-db"
+      identifier        = "info-api-lean-db"
       availability_zone = "us-east-1a"
       master_user_secret = [{
         secret_arn    = "arn:aws:secretsmanager:us-east-1:123456789012:secret:rds-mock"
@@ -67,7 +67,7 @@ run "the_default_stack_applies_and_publishes_the_endpoint" {
   }
 
   assert {
-    condition     = output.lambda_function_name == "info-api-info" && length(output.nat_public_ips) == 1
+    condition     = output.lambda_function_name == "info-api-lean-info" && length(output.nat_public_ips) == 1
     error_message = "Expected the function named after the project and one shared NAT gateway."
   }
 }

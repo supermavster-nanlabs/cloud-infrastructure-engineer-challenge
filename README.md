@@ -100,7 +100,7 @@ make destroy ENV=dev REGION=us-east-1 CONFIRM=dev   # the NAT gateway and databa
 ```
 
 `ENV` and `REGION` default to `dev` and `us-east-1`. Each pair has its own state
-(`info-api/<env>/<region>/terraform.tfstate`). Settings per environment are in
+(`info-api-lean/<env>/<region>/terraform.tfstate`). Settings per environment are in
 `terraform/environments/`:
 
 | Setting | dev | prod |
