@@ -1,4 +1,4 @@
-name = "info-api-prod"
+name = "info-api-lean-prod"
 
 # Resilient: a NAT gateway per zone, a standby database, longer backups, and a
 # database that cannot be deleted by accident. To destroy prod, set
